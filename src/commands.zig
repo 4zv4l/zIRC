@@ -89,7 +89,7 @@ pub const Cmd = struct {
                 try writer.print("\r{s: >15} to {s} :: {s}\n", .{ self.who.?, m.target, m.msg });
             },
             else => {
-                log.debug("\r{s}{s}\x1b{s}", .{ colors.light_red, self.raw, colors.reset });
+                log.debug("\r{s}{s}b{s}", .{ colors.light_red, self.raw, colors.reset });
             },
         }
     }
