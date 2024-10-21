@@ -39,24 +39,24 @@ pub fn deinit(self: *IRC) void {
 pub fn handshake(self: *IRC, nickname: []const u8, username: []const u8) !void {
     std.debug.print("{s}NICK {s}{s}\n", .{ colors.light_grey, nickname, colors.reset });
     try self.bwriter.writer().print("NICK {s}\n", .{nickname});
-    std.debug.print("{s}USER {s} 0 * :Zig IRC Client{s}\n", .{ colors.light_grey, username, colors.reset });
+    std.debug.print("{s}USER {s} * * :Zig IRC Client{s}\n", .{ colors.light_grey, username, colors.reset });
     try self.bwriter.writer().print("USER {s} 0 * :Zig IRC Client\n", .{username});
     try self.bwriter.flush();
 }
 
 // get message from server and return them as Msg struct
-pub fn eventLoop(self: *IRC) !Cmd {
+// return null if couldnt parse message
+pub fn eventLoop(self: *IRC, buffer: []u8) !struct { cmd: ?Cmd, len: usize } {
     while (true) {
         // will be freed by the root.recvMessageLoop
-        const line = try self.breader.reader().readUntilDelimiterAlloc(self.ally, '\n', 1 * 1024 * 1024); // 1mb
-        errdefer self.ally.free(line);
+        const line = try self.breader.reader().readUntilDelimiter(buffer, '\n');
         // parse or show row
-        const cmd = Cmd.parse(line);
+        const cmd = Cmd.parse(line) orelse return .{ .cmd = null, .len = line.len };
         // handling PING
         if (cmd.cmd == .ping) {
             try self.bwriter.writer().print("PONG {s}\n", .{cmd.cmd.ping.ping});
             try self.bwriter.flush();
         }
-        return cmd;
+        return .{ .cmd = cmd, .len = line.len };
     }
 }

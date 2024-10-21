@@ -4,14 +4,13 @@ const fmt = std.fmt;
 const mem = std.mem;
 const net = std.net;
 const log = std.log;
-const IRC = @import("IRC");
+const Colors = @import("colors.zig").colors;
 
 pub const Cmd = struct {
     who: ?[]const u8,
     raw: []const u8,
 
     cmd: union(enum) {
-        others: void, // command not here
         // PING <server1>
         ping: struct { ping: []const u8 },
         // USER <user> <mode> <unused> :<realname>
@@ -34,11 +33,9 @@ pub const Cmd = struct {
     },
 
     // raw command to Cmd
-    pub fn parse(line: []u8) Cmd {
+    pub fn parse(line: []u8) ?Cmd {
         var result: Cmd = undefined;
-        result.who = null;
         result.raw = line;
-        result.cmd = .others;
 
         if (mem.startsWith(u8, line, "PING")) {
             result.cmd = .{ .ping = .{ .ping = line[5..] } };
@@ -46,33 +43,34 @@ pub const Cmd = struct {
         }
 
         if (line[0] == ':') {
-            const username = line[1 .. mem.indexOfScalar(u8, line, '!') orelse 3];
-            result.who = username;
             var space_it = mem.splitScalar(u8, line, ' ');
-            _ = space_it.next() orelse return result;
+
+            // parse host sending command
+            const who = if (space_it.next()) |who| who else return null;
+            const length = mem.indexOfScalar(u8, who, '!') orelse who.len;
+            result.who = who[1..length]; // skip :
+
+            // parse command
             const cmd = blk: {
-                const cmd = @constCast(space_it.next() orelse "?????");
+                const cmd = @constCast(space_it.next() orelse return null);
                 _ = std.ascii.lowerString(cmd, cmd);
                 break :blk cmd;
             };
 
+            // parse arguments depending on the command
             if (mem.eql(u8, "privmsg", cmd)) {
-                result.cmd = .{ .privmsg = .{
-                    .target = space_it.next() orelse "???",
-                    .msg = space_it.rest()[1..],
-                } };
+                result.cmd = .{
+                    .privmsg = .{
+                        .target = space_it.next() orelse return null,
+                        .msg = space_it.rest()[1..], // skip :
+                    },
+                };
                 return result;
             }
         }
 
-        return result;
+        return null;
     }
-
-    const colors = .{
-        .light_grey = "\x1b[38;5;8m",
-        .light_red = "\x1b[38;5;1m",
-        .reset = "\x1b[0m",
-    };
 
     pub fn format(
         self: Cmd,
@@ -82,14 +80,14 @@ pub const Cmd = struct {
     ) !void {
         switch (self.cmd) {
             .ping => |p| {
-                try writer.print("\r{s}PING {s}{s}\n", .{ colors.light_grey, p.ping, colors.reset });
-                try writer.print("\r{s}PONG {s}{s}\n", .{ colors.light_grey, p.ping, colors.reset });
+                try writer.print("\r{s}PING {s}{s}\n", .{ Colors.light_grey, p.ping, Colors.reset });
+                try writer.print("\r{s}PONG {s}{s}\n", .{ Colors.light_grey, p.ping, Colors.reset });
             },
             .privmsg => |m| {
                 try writer.print("\r{s: >15} to {s} :: {s}\n", .{ self.who.?, m.target, m.msg });
             },
             else => {
-                log.debug("\r{s}{s}{s}", .{ colors.light_red, self.raw, colors.reset });
+                try writer.print("\r{s}{s}{s}\n", .{ Colors.light_red, self.raw, Colors.reset });
             },
         }
     }

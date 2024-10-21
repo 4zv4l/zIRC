@@ -3,35 +3,40 @@ const io = std.io;
 const net = std.net;
 const log = std.log;
 const Thread = std.Thread;
+const Colors = @import("colors.zig").colors;
 const IRC = @import("irc.zig");
 
 pub const std_options = std.Options{ .log_level = .debug };
 
 pub fn sendMessageLoop(irc: *IRC) void {
-    defer std.debug.print("sendMessageLoop: quitting...\n", .{});
     // user input loop
     var input_buffer: [4096]u8 = undefined;
     var stdin = std.io.getStdIn().reader();
-    while (true) {
+    var quit = false;
+    while (!quit) {
         std.debug.print("\x1b[92;1m>>>\x1b[0m ", .{});
         const line = stdin.readUntilDelimiter(&input_buffer, '\n') catch continue;
         if (line.len == 0) continue;
-        if (std.mem.eql(u8, "quit", line) or std.mem.eql(u8, "QUIT", line)) std.process.exit(0);
+        if (std.mem.eql(u8, "quit", line) or std.mem.eql(u8, "QUIT", line)) quit = true;
         irc.bwriter.writer().print("{s}\n", .{line}) catch return;
         irc.bwriter.flush() catch return;
     }
 }
 
 pub fn recvMessageLoop(irc: *IRC) void {
-    defer std.debug.print("recvMessageLoop: quitting...\n", .{});
+    var buffer: [1024]u8 = undefined;
     while (true) {
-        const m = irc.eventLoop() catch |e| switch (e) {
-            error.EndOfStream => return,
+        const m = irc.eventLoop(&buffer) catch |e| switch (e) {
+            error.EndOfStream => return std.debug.print("\r", .{}),
             else => @panic(@errorName(e)),
         };
-        defer irc.ally.free(m.raw);
 
-        std.debug.print("{}", .{m});
+        // to make better
+        if (m.cmd) |msg| {
+            std.debug.print("{}", .{msg});
+        } else {
+            std.debug.print("\r{s}{s}{s}\n", .{ Colors.light_red, buffer[0..m.len], Colors.reset });
+        }
         std.debug.print("\x1b[92;1m>>>\x1b[0m ", .{}); // reprint the prompt
     }
 }
