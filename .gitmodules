@@ -1,0 +1,3 @@
+[submodule "lib/Crossline"]
+	path = lib/Crossline
+	url = https://github.com/jcwangxp/Crossline

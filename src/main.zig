@@ -5,18 +5,22 @@ const log = std.log;
 const Thread = std.Thread;
 const Colors = @import("colors.zig").colors;
 const IRC = @import("irc.zig");
+const cr = @cImport(@cInclude("crossline.h"));
 
 pub const std_options = std.Options{ .log_level = .debug };
+//const prompt = "\x1b[92;1m>>>\x1b[0m ";
+const prompt = ">>> ";
 
 pub fn sendMessageLoop(irc: *IRC) void {
-    // user input loop
-    var input_buffer: [4096]u8 = undefined;
-    var stdin = std.io.getStdIn().reader();
+    defer cr.crossline_history_clear();
+    cr.crossline_prompt_color_set(cr.CROSSLINE_FGCOLOR_GREEN);
+
     var quit = false;
+    var buff: [2048]u8 = undefined;
     while (!quit) {
-        std.debug.print("\x1b[92;1m>>>\x1b[0m ", .{});
-        const line = stdin.readUntilDelimiter(&input_buffer, '\n') catch continue;
+        const line: []u8 = std.mem.span(cr.crossline_readline(prompt, &buff, buff.len) orelse return);
         if (line.len == 0) continue;
+
         if (std.mem.eql(u8, "quit", line) or std.mem.eql(u8, "QUIT", line)) quit = true;
         irc.bwriter.writer().print("{s}\n", .{line}) catch return;
         irc.bwriter.flush() catch return;
@@ -37,7 +41,7 @@ pub fn recvMessageLoop(irc: *IRC) void {
         } else {
             std.debug.print("\r{s}{s}{s}\n", .{ Colors.light_red, buffer[0..m.len], Colors.reset });
         }
-        std.debug.print("\x1b[92;1m>>>\x1b[0m ", .{}); // reprint the prompt
+        std.debug.print("{s}", .{prompt});
     }
 }
 
