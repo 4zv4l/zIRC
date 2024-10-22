@@ -30,6 +30,8 @@ pub const Cmd = struct {
         join: struct { channel: []const u8 },
         // PART <channel> [<message>]
         part: struct { channel: []const u8, msg: ?[]const u8 },
+        // QUIT
+        quit: struct { reason: []const u8 },
     },
 
     // raw command to Cmd
@@ -66,6 +68,12 @@ pub const Cmd = struct {
                     },
                 };
                 return result;
+            } else if (mem.eql(u8, "quit", cmd)) {
+                result.cmd = .{ .quit = .{ .reason = space_it.rest()[1..] } };
+                return result;
+            } else if (mem.eql(u8, "join", cmd)) {
+                result.cmd = .{ .join = .{ .channel = space_it.rest()[1..] } };
+                return result;
             }
         }
 
@@ -85,6 +93,12 @@ pub const Cmd = struct {
             },
             .privmsg => |m| {
                 try writer.print("\r{s: >15} to {s} :: {s}\n", .{ self.who.?, m.target, m.msg });
+            },
+            .join => |j| {
+                try writer.print("\r{s: >15} joined {s}\n", .{ self.who.?, j.channel });
+            },
+            .quit => |q| {
+                try writer.print("\r{s: >15} left {s}\n", .{ self.who.?, q.reason });
             },
             else => {
                 try writer.print("\r{s}{s}{s}\n", .{ Colors.light_red, self.raw, Colors.reset });
