@@ -1,6 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
-const Colors = @import("colors.zig").colors;
+const Colors = @import("colors.zig");
 
 pub const Cmd = struct {
     who: ?[]const u8,
@@ -81,13 +81,22 @@ pub const Cmd = struct {
 
     pub fn format(
         self: Cmd,
-        comptime _: []const u8,
+        comptime f: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
+        var color = false; // avoid printing reset color if didnt use color
+        if (mem.eql(u8, "red", f)) {
+            color = true;
+            try writer.print("{s}", .{Colors.light_red});
+        }
+        if (mem.eql(u8, "gray", f)) {
+            color = true;
+            try writer.print("{s}", .{Colors.light_grey});
+        }
         switch (self.cmd) {
             .ping => |p| {
-                try writer.print("{0s}PING {1s}\nPONG {1s}{2s}", .{ Colors.light_grey, p.ping, Colors.reset });
+                try writer.print("PING {0s}\nPONG {0s}", .{p.ping});
             },
             .privmsg => |m| {
                 try writer.print("{s: >15} to {s} :: {s}", .{ self.who.?, m.target, m.msg });
@@ -102,8 +111,9 @@ pub const Cmd = struct {
                 try writer.print("{s: >15} part {s} {s}", .{ self.who.?, p.channel, p.msg orelse "" });
             },
             else => {
-                try writer.print("{s}{s}{s}", .{ Colors.light_red, self.raw, Colors.reset });
+                try writer.print("<{s}>", .{self.raw});
             },
         }
+        if (color) try writer.print("{s}", .{Colors.reset});
     }
 };

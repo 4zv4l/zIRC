@@ -3,7 +3,7 @@ const io = std.io;
 const net = std.net;
 const log = std.log;
 const Thread = std.Thread;
-const Colors = @import("colors.zig").colors;
+const Colors = @import("colors.zig");
 const IRC = @import("irc.zig");
 const cr = @cImport(@cInclude("crossline.h"));
 const known_folder = @import("known-folders");
@@ -36,7 +36,10 @@ pub fn recvMessageLoop(irc: *IRC) void {
 
         // TODO: improve this
         if (m.cmd) |msg| {
-            bout.writer().print("\r{}\n{s}", .{ msg, prompt }) catch |e| log.err("error: {s}", .{@errorName(e)});
+            switch (msg.cmd) {
+                .ping => bout.writer().print("\r{gray}\n{s}", .{ msg, prompt }) catch |e| log.err("error: {s}", .{@errorName(e)}),
+                else => bout.writer().print("\r{}\n{s}", .{ msg, prompt }) catch |e| log.err("error: {s}", .{@errorName(e)}),
+            }
         } else {
             bout.writer().print("\r{s}{s}{s}\n{s}", .{ Colors.light_red, buffer[0..m.len], Colors.reset, prompt }) catch |e| log.err("error: {s}", .{@errorName(e)});
         }
