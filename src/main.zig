@@ -34,11 +34,10 @@ pub fn recvMessageLoop(irc: *IRC) void {
 
         // TODO: improve this
         if (m.cmd) |msg| {
-            std.debug.print("{}", .{msg});
+            std.debug.print("\r{}\n{s}", .{ msg, prompt });
         } else {
-            std.debug.print("\r{s}{s}{s}\n", .{ Colors.light_red, buffer[0..m.len], Colors.reset });
+            std.debug.print("\r{s}{s}{s}\n{s}", .{ Colors.light_red, buffer[0..m.len], Colors.reset, prompt });
         }
-        std.debug.print("{s}", .{prompt});
     }
 }
 
@@ -73,16 +72,18 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    if (args.len < 4) {
-        return std.debug.print("usage: {s} [host] [port] [nick] <user>\n", .{args[0]});
+    if (args.len < 4 or args.len > 6) {
+        return std.debug.print("usage: {s} [host] [port] <tls> [nick] <user>\n", .{args[0]});
     }
 
     const config = .{
         .hostname = args[1],
         .port = try std.fmt.parseUnsigned(u16, args[2], 10),
-        .nick = args[3],
-        .user = if (args.len == 5) args[4] else args[3],
+        .tls = std.mem.eql(u8, args[3], "tls"),
+        .nick = if (args.len == 4) args[3] else args[4],
+        .user = args[args.len - 1],
     };
+    log.debug("using tls: {}", .{config.tls});
     var irc = try IRC.init(allocator, config);
     defer irc.deinit();
 

@@ -91,23 +91,22 @@ pub const Cmd = struct {
     ) !void {
         switch (self.cmd) {
             .ping => |p| {
-                try writer.print("\r{s}PING {s}{s}\n", .{ Colors.light_grey, p.ping, Colors.reset });
-                try writer.print("\r{s}PONG {s}{s}\n", .{ Colors.light_grey, p.ping, Colors.reset });
+                try writer.print("{0s}PING {1s}\nPONG {1s}{2s}", .{ Colors.light_grey, p.ping, Colors.reset });
             },
             .privmsg => |m| {
-                try writer.print("\r{s: >15} to {s} :: {s}\n", .{ self.who.?, m.target, m.msg });
+                try writer.print("{s: >15} to {s} :: {s}", .{ self.who.?, m.target, m.msg });
             },
             .join => |j| {
-                try writer.print("\r{s: >15} joined {s}\n", .{ self.who.?, j.channel });
+                try writer.print("{s: >15} joined {s}", .{ self.who.?, j.channel });
             },
             .quit => |q| {
-                try writer.print("\r{s: >15} quit {s}\n", .{ self.who.?, q.reason });
+                try writer.print("{s: >15} quit {s}", .{ self.who.?, q.reason });
             },
             .part => |p| {
-                try writer.print("\r{s: >15} part {s} {s}\n", .{ self.who.?, p.channel, p.msg orelse "" });
+                try writer.print("{s: >15} part {s} {s}", .{ self.who.?, p.channel, p.msg orelse "" });
             },
             else => {
-                try writer.print("\r{s}{s}{s}\n", .{ Colors.light_red, self.raw, Colors.reset });
+                try writer.print("{s}{s}{s}", .{ Colors.light_red, self.raw, Colors.reset });
             },
         }
     }
