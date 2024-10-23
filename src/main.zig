@@ -9,13 +9,9 @@ const cr = @cImport(@cInclude("crossline.h"));
 const known_folder = @import("known-folders");
 
 pub const std_options = std.Options{ .log_level = .debug };
-//const prompt = "\x1b[92;1m>>>\x1b[0m ";
 const prompt = ">>> ";
 
 pub fn sendMessageLoop(irc: *IRC) void {
-    defer cr.crossline_history_clear();
-    //cr.crossline_prompt_color_set(cr.CROSSLINE_FGCOLOR_GREEN);
-
     var quit = false;
     var buff: [2048]u8 = undefined;
     while (!quit) {
@@ -36,7 +32,7 @@ pub fn recvMessageLoop(irc: *IRC) void {
             else => @panic(@errorName(e)),
         };
 
-        // to make better
+        // TODO: improve this
         if (m.cmd) |msg| {
             std.debug.print("{}", .{msg});
         } else {
@@ -57,11 +53,15 @@ pub fn getSaveHistoryPath(allocator: std.mem.Allocator) ![:0]u8 {
 
 pub fn saveHistory(allocator: std.mem.Allocator) !void {
     const save_history_path = try getSaveHistoryPath(allocator);
+    defer allocator.free(save_history_path);
+    log.debug("saving to: {s}", .{save_history_path});
     if (cr.crossline_history_save(save_history_path) != 0) return error.SaveHistory;
 }
 
 pub fn loadHistory(allocator: std.mem.Allocator) !void {
     const save_history_path = try getSaveHistoryPath(allocator);
+    defer allocator.free(save_history_path);
+    log.debug("loading from: {s}", .{save_history_path});
     if (cr.crossline_history_load(save_history_path) != 0) return error.LoadHistory;
 }
 

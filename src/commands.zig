@@ -74,6 +74,9 @@ pub const Cmd = struct {
             } else if (mem.eql(u8, "join", cmd)) {
                 result.cmd = .{ .join = .{ .channel = space_it.rest()[1..] } };
                 return result;
+            } else if (mem.eql(u8, "part", cmd)) {
+                result.cmd = .{ .part = .{ .channel = space_it.next().?, .msg = space_it.rest()[1..] } };
+                return result;
             }
         }
 
@@ -98,7 +101,10 @@ pub const Cmd = struct {
                 try writer.print("\r{s: >15} joined {s}\n", .{ self.who.?, j.channel });
             },
             .quit => |q| {
-                try writer.print("\r{s: >15} left {s}\n", .{ self.who.?, q.reason });
+                try writer.print("\r{s: >15} quit {s}\n", .{ self.who.?, q.reason });
+            },
+            .part => |p| {
+                try writer.print("\r{s: >15} part {s} {s}\n", .{ self.who.?, p.channel, p.msg orelse "" });
             },
             else => {
                 try writer.print("\r{s}{s}{s}\n", .{ Colors.light_red, self.raw, Colors.reset });
