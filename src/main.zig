@@ -26,6 +26,8 @@ pub fn sendMessageLoop(irc: *IRC) void {
 
 pub fn recvMessageLoop(irc: *IRC) void {
     var buffer: [1024]u8 = undefined;
+    const stdout = io.getStdOut().writer();
+    var bout = io.bufferedWriter(stdout);
     while (true) {
         const m = irc.eventLoop(&buffer) catch |e| switch (e) {
             error.EndOfStream => return std.debug.print("\r", .{}),
@@ -34,13 +36,15 @@ pub fn recvMessageLoop(irc: *IRC) void {
 
         // TODO: improve this
         if (m.cmd) |msg| {
-            std.debug.print("\r{}\n{s}", .{ msg, prompt });
+            bout.writer().print("\r{}\n{s}", .{ msg, prompt }) catch |e| log.err("error: {s}", .{@errorName(e)});
         } else {
-            std.debug.print("\r{s}{s}{s}\n{s}", .{ Colors.light_red, buffer[0..m.len], Colors.reset, prompt });
+            bout.writer().print("\r{s}{s}{s}\n{s}", .{ Colors.light_red, buffer[0..m.len], Colors.reset, prompt }) catch |e| log.err("error: {s}", .{@errorName(e)});
         }
+        bout.flush() catch |e| log.err("error: {s}", .{@errorName(e)});
     }
 }
 
+// return ~/.zIRC_history or ./zIRC_history
 pub fn getSaveHistoryPath(allocator: std.mem.Allocator) ![:0]u8 {
     if (try known_folder.getPath(allocator, .home)) |dir_path| {
         defer allocator.free(dir_path);

@@ -1,7 +1,6 @@
 const std = @import("std");
 const io = std.io;
 const net = std.net;
-const log = std.log;
 const tls = std.crypto.tls;
 const Cmd = @import("commands.zig").Cmd;
 

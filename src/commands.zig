@@ -1,9 +1,5 @@
 const std = @import("std");
-const io = std.io;
-const fmt = std.fmt;
 const mem = std.mem;
-const net = std.net;
-const log = std.log;
 const Colors = @import("colors.zig").colors;
 
 pub const Cmd = struct {
